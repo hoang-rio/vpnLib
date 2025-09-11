@@ -713,7 +713,7 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
         mProfile = vp;
         ProfileManager.setConnectedVpnProfile(this, vp);
         VpnStatus.setConnectedVPNProfile(vp.getUUIDString());
-//        keepVPNAlive.scheduleKeepVPNAliveJobService(this, vp);
+        keepVPNAlive.scheduleKeepVPNAliveJobService(this, vp);
 
         String nativeLibraryDirectory = getApplicationInfo().nativeLibraryDir;
         String tmpDir;
