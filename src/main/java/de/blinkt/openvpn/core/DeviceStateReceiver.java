@@ -13,14 +13,12 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.NetworkInfo.State;
 import android.os.Handler;
-import android.preference.PreferenceManager;
+import android.os.Looper;
 
 import de.blinkt.openvpn.R;
 import de.blinkt.openvpn.core.VpnStatus.ByteCountListener;
 
 import java.util.LinkedList;
-import java.util.Objects;
-import java.util.StringTokenizer;
 
 import static de.blinkt.openvpn.core.OpenVPNManagement.pauseReason;
 
@@ -37,13 +35,12 @@ public class DeviceStateReceiver extends BroadcastReceiver implements ByteCountL
     // Time to wait after network disconnect to pause the VPN
     private final int DISCONNECT_WAIT = 20;
 
-
     connectState network = connectState.DISCONNECTED;
     connectState screen = connectState.SHOULDBECONNECTED;
     connectState userpause = connectState.SHOULDBECONNECTED;
 
     private String lastStateMsg = null;
-    private java.lang.Runnable mDelayDisconnectRunnable = new Runnable() {
+    private final java.lang.Runnable mDelayDisconnectRunnable = new Runnable() {
         @Override
         public void run() {
             if (!(network == connectState.PENDINGDISCONNECT))
@@ -81,7 +78,7 @@ public class DeviceStateReceiver extends BroadcastReceiver implements ByteCountL
         long data;
     }
 
-    private LinkedList<Datapoint> trafficdata = new LinkedList<>();
+    private final LinkedList<Datapoint> trafficdata = new LinkedList<>();
 
 
     @Override
@@ -126,11 +123,11 @@ public class DeviceStateReceiver extends BroadcastReceiver implements ByteCountL
         }
     }
 
-    public DeviceStateReceiver(OpenVPNManagement magnagement) {
+    public DeviceStateReceiver(OpenVPNManagement management) {
         super();
-        mManagement = magnagement;
+        mManagement = management;
         mManagement.setPauseCallback(this);
-        mDisconnectHandler = new Handler();
+        mDisconnectHandler = new Handler(Looper.getMainLooper());
     }
 
 
@@ -170,7 +167,6 @@ public class DeviceStateReceiver extends BroadcastReceiver implements ByteCountL
         }
     }
 
-
     private void fillTrafficData() {
         trafficdata.add(new Datapoint(System.currentTimeMillis(), TRAFFIC_LIMIT));
     }
@@ -179,12 +175,16 @@ public class DeviceStateReceiver extends BroadcastReceiver implements ByteCountL
         return (a == null) ? (b == null) : a.equals(b);
     }
 
-
     public void networkStateChange(Context context) {
-        NetworkInfo networkInfo = getCurrentNetworkInfo(context);
         SharedPreferences prefs = Preferences.getDefaultSharedPreferences(context);
-        boolean sendusr1 = prefs.getBoolean("netchangereconnect", true);
+        boolean ignoreNetworkState = prefs.getBoolean("ignorenetstate", false);
+        if (ignoreNetworkState) {
+            network = connectState.SHOULDBECONNECTED;
+            return;
+        }
 
+        NetworkInfo networkInfo = getCurrentNetworkInfo(context);
+        boolean sendusr1 = prefs.getBoolean("netchangereconnect", true);
 
         String netstatestring;
         if (networkInfo == null) {

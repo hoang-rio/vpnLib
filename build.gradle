@@ -1,4 +1,7 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 apply plugin: 'com.android.library'
+apply plugin: 'org.jetbrains.kotlin.android'
 android {
     compileSdk project.ext.compileSdkVersion
 
@@ -25,8 +28,14 @@ android {
         buildConfig true
     }
 }
-
+kotlin {
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_17
+    }
+}
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.appcompat:appcompat:1.7.1'
+    implementation 'androidx.core:core-ktx:1.17.0'
+    implementation 'androidx.security:security-crypto:1.1.0'
 }
