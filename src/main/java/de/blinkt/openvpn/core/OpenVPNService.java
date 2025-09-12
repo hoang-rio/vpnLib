@@ -71,6 +71,7 @@ import de.blinkt.openvpn.VpnProfile;
 import de.blinkt.openvpn.api.ExternalAppDatabase;
 import de.blinkt.openvpn.core.VpnStatus.ByteCountListener;
 import de.blinkt.openvpn.core.VpnStatus.StateListener;
+import de.blinkt.openvpn.utils.TotalTraffic;
 
 public class OpenVPNService extends VpnService implements StateListener, Callback, ByteCountListener, IOpenVPNServiceInternal {
     public static final String START_SERVICE = "de.blinkt.openvpn.START_SERVICE";
@@ -364,9 +365,7 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
         nbuilder.setOngoing(true);
         nbuilder.setSmallIcon(R.drawable.ic_notification);
         if (status == LEVEL_WAITING_FOR_USER_INPUT) {
-            int flags = 0;
-            flags = PendingIntent.FLAG_IMMUTABLE;
-            PendingIntent pIntent = PendingIntent.getActivity(this, 0, intent, flags);
+            PendingIntent pIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE);
             nbuilder.setContentIntent(pIntent);
         } else {
             PendingIntent contentPendingIntent = getContentIntent();
@@ -421,7 +420,7 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
                 if (mProfile != null)
                     name = mProfile.mName;
                 else
-                    name = "OpenVPN";
+                    name = "VPN Gate";
                 String toastText = String.format(Locale.getDefault(), "%s - %s", name, msg);
                 mlastToast = Toast.makeText(getBaseContext(), toastText, Toast.LENGTH_SHORT);
                 mlastToast.show();
@@ -446,9 +445,10 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
             if (priority != 0) {
                 Method setpriority = nbuilder.getClass().getMethod("setPriority", int.class);
                 setpriority.invoke(nbuilder, priority);
-
-                Method setUsesChronometer = nbuilder.getClass().getMethod("setUsesChronometer", boolean.class);
-                setUsesChronometer.invoke(nbuilder, true);
+                if (mDisplaySpeed) {
+                    Method setUsesChronometer = nbuilder.getClass().getMethod("setUsesChronometer", boolean.class);
+                    setUsesChronometer.invoke(nbuilder, true);
+                }
 
             }
 
@@ -463,7 +463,7 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
     private void addVpnActionsToNotification(Notification.Builder nbuilder) {
         Intent disconnectVPN = new Intent(this, OpenVPNService.class);
         disconnectVPN.setAction(DISCONNECT_VPN);
-        PendingIntent disconnectPendingIntent = PendingIntent.getActivity(this, 0, disconnectVPN, PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent disconnectPendingIntent = PendingIntent.getService(this, 0, disconnectVPN, PendingIntent.FLAG_IMMUTABLE);
 
         nbuilder.addAction(R.drawable.ic_menu_close_clear_cancel,
                 getString(R.string.cancel_connection), disconnectPendingIntent);
@@ -554,7 +554,18 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
             mNotificationAlwaysVisible = true;
 
         VpnStatus.addStateListener(this);
-        VpnStatus.addByteCountListener(this);
+        if (mDisplaySpeed) {
+            VpnStatus.addByteCountListener(this);
+        }
+
+        if (intent != null && DISCONNECT_VPN.equals(intent.getAction())) {
+            try {
+                stopVPN(false);
+            } catch (RemoteException e) {
+                VpnStatus.logException(e);
+            }
+            return START_NOT_STICKY;
+        }
 
         if (intent != null && PAUSE_VPN.equals(intent.getAction())) {
             if (mDeviceStateReceiver != null)
@@ -1414,7 +1425,8 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
 
     @Override
     public void updateByteCount(long in, long out, long diffIn, long diffOut) {
-        if (mDisplayBytecount) {
+        TotalTraffic.calcTraffic(this, in, out, diffIn, diffOut);
+        if (mDisplayBytecount && mDisplaySpeed) {
             String netstat = String.format(getString(R.string.statusline_bytecount),
                     humanReadableByteCount(in, false, getResources()),
                     humanReadableByteCount(diffIn / OpenVPNManagement.mBytecountInterval, true, getResources()),
