@@ -39,3 +39,5 @@
 -keepclassmembers class de.blinkt.openvpn.core.VpnStatus {public *;}
 -keep class de.blinkt.openvpn.utils.**
 -keepclassmembers class de.blinkt.openvpn.utils.** { public *;}
+-keep class de.blinkt.openvpn.core.keepVPNAlive
+-keepclassmembers class de.blinkt.openvpn.core.keepVPNAlive { public *;}
