@@ -32,6 +32,7 @@ import android.content.res.Resources;
 import android.graphics.Color;
 import android.net.ConnectivityManager;
 import android.net.ProxyInfo;
+import android.net.Uri;
 import android.net.VpnService;
 import android.os.Build;
 import android.os.Bundle;
@@ -463,7 +464,7 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
     private void addVpnActionsToNotification(Notification.Builder nbuilder) {
         Intent disconnectVPN = new Intent(this, OpenVPNService.class);
         disconnectVPN.setAction(DISCONNECT_VPN);
-        PendingIntent disconnectPendingIntent = PendingIntent.getService(this, 0, disconnectVPN, PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent disconnectPendingIntent = PendingIntent.getActivity(this, 0, disconnectVPN, PendingIntent.FLAG_IMMUTABLE);
 
         nbuilder.addAction(R.drawable.ic_menu_close_clear_cancel,
                 getString(R.string.cancel_connection), disconnectPendingIntent);
@@ -1088,9 +1089,7 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
         for(IpAddress ipIncl: routes.getNetworks(true))
         {
             try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    builder.addRoute(ipIncl.getPrefix());
-                }
+                builder.addRoute(ipIncl.getPrefix());
             } catch (UnknownHostException|IllegalArgumentException ia) {
                 VpnStatus.logError(getString(R.string.route_rejected) + ipIncl + " " + ia.getLocalizedMessage());
             }
@@ -1098,9 +1097,7 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
         for(IpAddress ipExcl: routes.getNetworks(false))
         {
             try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    builder.excludeRoute(ipExcl.getPrefix());
-                }
+                builder.excludeRoute(ipExcl.getPrefix());
             } catch (UnknownHostException|IllegalArgumentException ia) {
                 VpnStatus.logError(getString(R.string.route_rejected) + ipExcl + " " + ia.getLocalizedMessage());
             }
@@ -1469,6 +1466,18 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
     }
 
 
+    private Intent getWebAuthIntent(String url, boolean external, Notification.Builder nbuilder)
+    {
+        int reason = R.string.openurl_requested;
+        nbuilder.setContentTitle(getString(reason));
+
+        nbuilder.setContentText(url);
+        Intent intent = VariantConfig.getOpenUrlIntent(this, external);
+        intent.setData(Uri.parse(url));
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        return intent;
+    }
+
     public void trigger_sso(String info) {
         String method = info.split(":", 2)[0];
 
@@ -1481,20 +1490,50 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
 
         Intent intent;
         int reason;
-        if (method.equals("CR_TEXT")) {
-            String challenge = info.split(":", 2)[1];
-            reason = R.string.crtext_requested;
-            nbuilder.setContentTitle(getString(reason));
-            nbuilder.setContentText(challenge);
+
+        switch (method) {
+            case "OPEN_URL": {
+                reason = R.string.openurl_requested;
+                String url = info.split(":", 2)[1];
+                intent = getWebAuthIntent(url, false, nbuilder);
+
+                break;
+            }
+            case "WEB_AUTH": {
+                reason = R.string.openurl_requested;
+                String[] parts = info.split(":", 3);
+                if (parts.length < 3) {
+                    VpnStatus.logError("WEB_AUTH method with invalid argument found");
+                    return;
+                }
+                String url = parts[2];
+                String[] flags = parts[1].split(",");
+                boolean external = false;
+                for (String flag : flags) {
+                    if (flag.equals("external")) {
+                        external = true;
+                        break;
+                    }
+                }
+
+                intent = getWebAuthIntent(url, external, nbuilder);
+                break;
+            }
+            case "CR_TEXT":
+                String challenge = info.split(":", 2)[1];
+                reason = R.string.crtext_requested;
+                nbuilder.setContentTitle(getString(reason));
+                nbuilder.setContentText(challenge);
 
                 intent = new Intent();
                 intent.setComponent(new ComponentName(this, getPackageName() + ".activities.CredentialsPopup"));
 
                 intent.putExtra(EXTRA_CHALLENGE_TXT, challenge);
 
-        } else {
-            VpnStatus.logError("Unknown SSO method found: " + method);
-            return;
+                break;
+            default:
+                VpnStatus.logError("Unknown SSO method found: " + method);
+                return;
         }
 
         // updateStateString trigger the notification of the VPN to be refreshed, save this intent

@@ -4,7 +4,7 @@ vpnLib Module for [vpngate-connector](https://github.com/hoang-rio/vpngate-conne
 
 # Source Version
 
-This module built from: https://github.com/schwabe/ics-openvpn/tree/v0.7.61
+This module built from: https://github.com/schwabe/ics-openvpn/tree/v0.7.62
 
 # LICENSE
 
