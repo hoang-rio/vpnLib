@@ -157,8 +157,6 @@
     <string name="speed_waiting">Waiting for state message…</string>
     <string name="converted_profile">imported profile</string>
     <string name="converted_profile_i">imported profile %d</string>
-    <string name="broken_images">Broken Images</string>
-    <string name="broken_images_faq">&lt;p&gt;Official HTC images are known to have a strange routing problem causing traffic not to flow through the tunnel (See also &lt;a href="https://github.com/schwabe/ics-openvpn/issues/18"&gt;Issue 18&lt;/a&gt; in the bug tracker.)&lt;/p&gt;&lt;p&gt;Older official SONY images from Xperia Arc S and Xperia Ray have been reported to be missing the VPNService completely from the image. (See also &lt;a href="https://github.com/schwabe/ics-openvpn/issues/29"&gt;Issue 29&lt;/a&gt; in the bug tracker.)&lt;/p&gt;&lt;p&gt;On custom build images the tun module might be missing or the rights of /dev/tun might be wrong. Some CM9 images need the "Fix ownership" option under "Device specific hacks" enabled.&lt;/p&gt;&lt;p&gt;Most importantly: If your device has a broken Android image, report it to your vendor. The more people who report an issue to the vendor, the more likely they are to fix it.&lt;/p&gt;</string>
     <string name="pkcs12_file_encryption_key">PKCS12 File Encryption Key</string>
     <string name="private_key_password">Private Key Password</string>
     <string name="password">Password</string>
@@ -520,6 +518,10 @@
     <string name="dnsserver_no_valid_server">No valid DNS server left. Terminating connection.</string>
     <string name="editor_close_profile_changed">Profile has changed outside the editor. Closing configuration editor.</string>
     <string name="confirmations_title">Disable VPN connection confirmations</string>
-    <string name="confirmations_summary">(Not recommended) Disables confirmations when connecting/disconnecting VPN. This disables the safeguard to accidientially disconnect VPN connections</string>
+    <string name="confirmations_summary">(Not recommended) Disables confirmations when connecting/disconnecting VPN. This disables the safeguard to accidientally disconnect VPN connections</string>
+    <string name="minimal_ui">Minimal UI</string>
+    <string name="cannot_start_vpn_not_configured">Cannot start VPN. No default VPN has been configured.</string>
+    <string name="minimal_ui_not_available">Functionality not available when minimal UI is enabled</string>
+    <string name="missing_keychain_access">Access to Android keychain certificate is missing. Tap this notification to select/import a certificate</string>
 
 </resources>
