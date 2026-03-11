@@ -5,6 +5,12 @@
 
 package de.blinkt.openvpn.core;
 
+import android.media.AudioAttributes;
+import androidx.core.app.NotificationCompat;
+import android.os.Vibrator;
+import android.os.VibrationEffect;
+import android.media.RingtoneManager;
+import android.media.Ringtone;
 import static android.content.Intent.FLAG_ACTIVITY_NEW_TASK;
 import static de.blinkt.openvpn.VpnProfile.EXTRA_PROFILEUUID;
 import static de.blinkt.openvpn.VpnProfile.EXTRA_PROFILE_VERSION;
@@ -87,6 +93,7 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
     public static final String NOTIFICATION_CHANNEL_BG_ID = "openvpn_bg";
     public static final String NOTIFICATION_CHANNEL_NEWSTATUS_ID = "openvpn_newstat";
     public static final String NOTIFICATION_CHANNEL_USERREQ_ID = "openvpn_userreq";
+    public static final String NOTIFICATION_CHANNEL_ERROR_ID = "openvpn_error";
 
     public static final String VPNSERVICE_TUN = "vpnservice-tun";
     public final static String ORBOT_PACKAGE_NAME = "org.torproject.android";
@@ -124,6 +131,8 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
     private DeviceStateReceiver mDeviceStateReceiver;
     private boolean mDisplayBytecount = false;
     private boolean mStarting = false;
+    private boolean mIsUserDisconnect = false;
+    private boolean mWasConnected = false;
     private long mConnecttime;
     private OpenVPNManagement mManagement;
     private final IBinder mBinder = new IOpenVPNServiceInternal.Stub() {
@@ -544,6 +553,7 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
 
     @Override
     public boolean stopVPN(boolean replaceConnection) throws RemoteException {
+        mIsUserDisconnect = true;
         if (getManagement() != null)
             return getManagement().stopVPN(replaceConnection);
         else
@@ -552,6 +562,7 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        mIsUserDisconnect = false;
         if (intent != null && intent.getBooleanExtra(ALWAYS_SHOW_NOTIFICATION, false))
             mNotificationAlwaysVisible = true;
 
@@ -1377,7 +1388,38 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
         tunConfig.mLocalIPv6 = ipv6addr;
     }
 
-    @Override
+    private void triggerDisconnectNotification() {
+        String channelId = NOTIFICATION_CHANNEL_ERROR_ID;
+        NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel chan = new NotificationChannel(channelId,
+                    getString(R.string.channel_name_error), NotificationManager.IMPORTANCE_HIGH);
+            chan.setDescription(getString(R.string.channel_description_error));
+            chan.enableVibration(true);
+            chan.setVibrationPattern(new long[]{0, 250, 250, 250});
+            
+            // Set sound
+            Uri soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+            chan.setSound(soundUri, new android.media.AudioAttributes.Builder()
+                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION)
+                    .build());
+            
+            mNotificationManager.createNotificationChannel(chan);
+        }
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, channelId)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle(getString(R.string.notifcation_title_notconnect))
+                .setContentText(getString(R.string.notification_disconnected_error))
+                .setPriority(NotificationCompat.PRIORITY_MAX)
+                .setDefaults(Notification.DEFAULT_ALL)
+                .setAutoCancel(true);
+
+        mNotificationManager.notify(NOTIFICATION_CHANNEL_ERROR_ID.hashCode(), builder.build());
+    }
+
     public void updateState(String state, String logmessage, int resid, ConnectionStatus level, Intent intent) {
         // If the process is not running, ignore any state,
         // Notification should be invisible in this state
@@ -1393,10 +1435,17 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
             if (level == LEVEL_CONNECTED) {
                 mDisplayBytecount = true;
                 mConnecttime = System.currentTimeMillis();
+                mWasConnected = true;
+                mIsUserDisconnect = false;
                 if (!runningOnAndroidTV())
                     channel = NOTIFICATION_CHANNEL_BG_ID;
             } else {
                 mDisplayBytecount = false;
+                if ((level == ConnectionStatus.LEVEL_NOTCONNECTED || level == ConnectionStatus.LEVEL_AUTH_FAILED)
+                        && mWasConnected && !mIsUserDisconnect) {
+                    triggerDisconnectNotification();
+                    mWasConnected = false;
+                }
             }
 
             // Other notifications are shown,
