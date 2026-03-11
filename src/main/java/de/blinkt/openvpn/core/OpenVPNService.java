@@ -1392,8 +1392,8 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel chan = new NotificationChannel(channelId,
-                    getString(R.string.channel_name_error), NotificationManager.IMPORTANCE_HIGH);
-            chan.setDescription(getString(R.string.channel_description_error));
+                    getString(R.string.openvpn_channel_name_error), NotificationManager.IMPORTANCE_HIGH);
+            chan.setDescription(getString(R.string.openvpn_channel_description_error));
             chan.enableVibration(true);
             chan.setVibrationPattern(new long[]{0, 250, 250, 250});
             
@@ -1410,7 +1410,7 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, channelId)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(getString(R.string.notifcation_title_notconnect))
-                .setContentText(getString(R.string.notification_disconnected_error))
+                .setContentText(getString(R.string.openvpn_notification_disconnected_error))
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setDefaults(Notification.DEFAULT_ALL)
                 .setAutoCancel(true);

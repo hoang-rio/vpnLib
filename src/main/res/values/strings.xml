@@ -524,7 +524,7 @@
     <string name="minimal_ui_not_available">Functionality not available when minimal UI is enabled</string>
     <string name="missing_keychain_access">Access to Android keychain certificate is missing. Tap this notification to select/import a certificate</string>
 
-    <string name="channel_name_error">OpenVPN Error</string>
-    <string name="channel_description_error">Notifications for OpenVPN errors</string>
-    <string name="notification_disconnected_error">OpenVPN disconnected due to error</string>
+    <string name="openvpn_channel_name_error">OpenVPN Error</string>
+    <string name="openvpn_channel_description_error">Notifications for OpenVPN errors</string>
+    <string name="openvpn_notification_disconnected_error">OpenVPN disconnected due to error</string>
 </resources>
