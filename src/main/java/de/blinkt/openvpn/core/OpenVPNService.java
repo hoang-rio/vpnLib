@@ -1413,7 +1413,9 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
                 .setContentText(getString(R.string.openvpn_notification_disconnected_error))
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setDefaults(Notification.DEFAULT_ALL)
-                .setAutoCancel(true);
+                .setVibrate(new long[]{0, 250, 250, 250})
+                .setAutoCancel(true)
+                .setContentIntent(getContentIntent());
 
         mNotificationManager.notify(NOTIFICATION_CHANNEL_ERROR_ID.hashCode(), builder.build());
     }
