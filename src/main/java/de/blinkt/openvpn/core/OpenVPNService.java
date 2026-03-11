@@ -5,12 +5,10 @@
 
 package de.blinkt.openvpn.core;
 
-import android.media.AudioAttributes;
 import androidx.core.app.NotificationCompat;
-import android.os.Vibrator;
-import android.os.VibrationEffect;
+
 import android.media.RingtoneManager;
-import android.media.Ringtone;
+
 import static android.content.Intent.FLAG_ACTIVITY_NEW_TASK;
 import static de.blinkt.openvpn.VpnProfile.EXTRA_PROFILEUUID;
 import static de.blinkt.openvpn.VpnProfile.EXTRA_PROFILE_VERSION;
