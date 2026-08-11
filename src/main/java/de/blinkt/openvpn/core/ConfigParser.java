@@ -82,7 +82,6 @@ public class ConfigParser {
             "suppress-timestamps",
             "tap-sleep",
             "tmp-dir",
-            "tun-ipv6",
             "topology",
             "user",
             "win-sys",
@@ -523,6 +522,14 @@ public class ConfigParser {
             }
 
         }
+
+        Vector<String> ifconfig6 = getOption("ifconfig-ipv6", 2, 2);
+        if (ifconfig6 != null) {
+            np.mIPv6Address = ifconfig6.get(1);
+        }
+
+        if (getOption("tun-ipv6", 0, 0) != null)
+            np.mUseIPv6 = true;
 
         if (getOption("remote-random-hostname", 0, 0) != null)
             np.mUseRandomHostname = true;

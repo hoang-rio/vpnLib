@@ -138,6 +138,8 @@ public class VpnProfile implements Serializable, Cloneable {
     public String mCipher = "";
     public boolean mNobind = true;
     public boolean mUseDefaultRoutev6 = true;
+    // Enabled by default so configs without an explicit tun-ipv6 (e.g. VPN Gate) still negotiate IPv6
+    public boolean mUseIPv6 = true;
     public String mCustomRoutesv6 = "";
     public String mKeyPassword = "";
     public boolean mPersistTun = false;
@@ -637,6 +639,9 @@ public class VpnProfile implements Serializable, Cloneable {
             }
 
         cfg.append(routes);
+
+        if (mUseIPv6)
+            cfg.append("tun-ipv6\n");
 
         if (mOverrideDNS || !mUsePull) {
             if (!TextUtils.isEmpty(mDNS1)) {
