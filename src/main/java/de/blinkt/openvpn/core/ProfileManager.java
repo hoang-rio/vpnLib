@@ -344,7 +344,15 @@ public class ProfileManager {
             } else {
                 profiles.put(vp.getUUID().toString(), vp);
             }
-        } catch (IOException | ClassNotFoundException | GeneralSecurityException e) {
+        } catch (IOException | ClassNotFoundException | GeneralSecurityException
+                | LinkageError e) {
+            // LinkageError: a profile saved by an older app version can
+            // reference classes that no longer exist (removed/renamed or
+            // stripped by R8). Deserialization then throws
+            // NoClassDefFoundError during serialVersionUID computation —
+            // an Error, not ClassNotFoundException. Swallow it so one bad
+            // profile file cannot crash the OpenVPN service; the entry is
+            // skipped and will be overwritten on next save.
             if (!vpnentry.equals(TEMPORARY_PROFILE_FILENAME))
                 VpnStatus.logException("Loading VPN List", e);
         } finally {
