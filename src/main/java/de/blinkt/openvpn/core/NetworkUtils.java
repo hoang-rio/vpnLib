@@ -28,10 +28,19 @@ public class NetworkUtils {
         Vector<String> nets = new Vector<>();
         Network[] networks = conn.getAllNetworks();
         for (Network network : networks) {
-            NetworkInfo ni = conn.getNetworkInfo(network);
-            LinkProperties li = conn.getLinkProperties(network);
-
-            NetworkCapabilities nc = conn.getNetworkCapabilities(network);
+            NetworkCapabilities nc;
+            LinkProperties li;
+            try {
+                // getNetworkCapabilities can throw a SecurityException (e.g.
+                // "Package android does not belong to <uid>") on some devices/
+                // users when the binder identity check for the network fails.
+                // Local-network route discovery is best-effort, so a failure
+                // here must not abort openTun and crash the VPN service thread.
+                nc = conn.getNetworkCapabilities(network);
+                li = conn.getLinkProperties(network);
+            } catch (SecurityException e) {
+                continue;
+            }
 
             // Ignore network if it has no capabilities
             if (nc == null)
