@@ -44,6 +44,7 @@
     <string name="no_keystore_cert_selected">You must select a User certificate</string>
     <string name="no_ca_cert_selected">You must select a CA certificate or enable peer fingerprint check</string>
     <string name="no_error_found">No error found</string>
+    <string name="openvpn3_different_proxy">OpenVPN 3 C++ implementation does not support different proxy settings per remote</string>
     <string name="config_error_found">Error in Configuration</string>
     <string name="ipv4_format_error">Error parsing the IPv4 address</string>
     <string name="custom_route_format_error">Error parsing the custom routes</string>

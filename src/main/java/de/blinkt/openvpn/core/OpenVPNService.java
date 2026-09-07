@@ -133,6 +133,8 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
     private boolean mWasConnected = false;
     private long mConnecttime;
     private OpenVPNManagement mManagement;
+    /* Just use a static member as long as this is stateless */
+    private DPC1Protocol accReceiver = new DPC1Protocol();
     private final IBinder mBinder = new IOpenVPNServiceInternal.Stub() {
 
         @Override
@@ -614,7 +616,6 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
         return START_STICKY;
     }
 
-    @TargetApi(Build.VERSION_CODES.M)
     private boolean foregroundNotificationVisible() {
         NotificationManager mNotificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         StatusBarNotification[] notifications = mNotificationManager.getActiveNotifications();
@@ -879,6 +880,7 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
             unregisterDeviceStateReceiver(mDeviceStateReceiver);
             mDeviceStateReceiver = null;
         }
+        mCommandHandlerThread.quit();
         // Just in case unregister for state
         VpnStatus.removeStateListener(this);
         VpnStatus.flushLog();
@@ -1516,13 +1518,13 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
     }
 
 
-    private Intent getWebAuthIntent(String url, boolean external, Notification.Builder nbuilder)
+    private Intent getWebAuthIntent(String url, Notification.Builder nbuilder)
     {
         int reason = R.string.openurl_requested;
         nbuilder.setContentTitle(getString(reason));
-
         nbuilder.setContentText(url);
-        Intent intent = VariantConfig.getOpenUrlIntent(this, external);
+
+        Intent intent = new Intent(Intent.ACTION_VIEW);
         intent.setData(Uri.parse(url));
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         return intent;
@@ -1545,7 +1547,7 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
             case "OPEN_URL": {
                 reason = R.string.openurl_requested;
                 String url = info.split(":", 2)[1];
-                intent = getWebAuthIntent(url, false, nbuilder);
+                intent = getWebAuthIntent(url, nbuilder);
 
                 break;
             }
@@ -1566,7 +1568,7 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
                     }
                 }
 
-                intent = getWebAuthIntent(url, external, nbuilder);
+                intent = getWebAuthIntent(url, nbuilder);
                 break;
             }
             case "CR_TEXT":
@@ -1610,5 +1612,23 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
         int notificationId = channel.hashCode();
 
         mNotificationManager.notify(notificationId, notification);
+    }
+
+    void receiveAccMessage(AccMessage accMessage) {
+        if (!mProfile.mDpc1protocol) {
+            VpnStatus.logInfo("Received app custom control message but support disabled in profile");
+            return;
+        }
+
+        if (accMessage.getProtocol().equals("internal:supported_protocols"))
+        {
+            VpnStatus.logDebug("Server reports following app custom protocols to be supported: " + new String(accMessage.getMessage()));
+            return;
+        }
+
+        AccMessage response = accReceiver.processMessage(accMessage);
+        if (response != null){
+            mManagement.sendAccMessage(response);
+        }
     }
 }
