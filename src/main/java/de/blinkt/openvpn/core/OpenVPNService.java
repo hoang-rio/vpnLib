@@ -450,7 +450,7 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
     private void jbNotificationExtras(int priority,
                                       android.app.Notification.Builder nbuilder) {
         try {
-            if (priority != 0) {
+            if (nbuilder != null && priority != 0) {
                 Method setpriority = nbuilder.getClass().getMethod("setPriority", int.class);
                 setpriority.invoke(nbuilder, priority);
                 if (mDisplaySpeed) {
@@ -462,7 +462,7 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
 
             //ignore exception
         } catch (NoSuchMethodException | IllegalArgumentException |
-                InvocationTargetException | IllegalAccessException e) {
+                InvocationTargetException | IllegalAccessException | NullPointerException e) {
             VpnStatus.logException(e);
         }
 
