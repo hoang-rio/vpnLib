@@ -600,27 +600,22 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
         }
 
 
-        // Always show notification here to avoid problem with startForeground timeout
+        // Always show notification here to avoid problem with startForeground timeout.
+        // This service is started via startForegroundService() (VPNLaunchHelper) and
+        // returns START_STICKY, so the system can kill/restart it and re-deliver
+        // onStartCommand() with a null intent. A notification posted through notify()
+        // survives process death, so an !foregroundNotificationVisible() guard here would
+        // wrongly skip startForeground() on that restart and throw
+        // ForegroundServiceDidNotStartInTimeException. Promote unconditionally.
         VpnStatus.logInfo(R.string.building_configration);
-
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.M  || (!foregroundNotificationVisible())) {
-
-            VpnStatus.updateStateString("VPN_GENERATE_CONFIG", "", R.string.building_configration, ConnectionStatus.LEVEL_START);
-            showNotification(VpnStatus.getLastCleanLogMessage(this),
-                    VpnStatus.getLastCleanLogMessage(this), NOTIFICATION_CHANNEL_NEWSTATUS_ID, 0, ConnectionStatus.LEVEL_START, null);
-        }
+        VpnStatus.updateStateString("VPN_GENERATE_CONFIG", "", R.string.building_configration, ConnectionStatus.LEVEL_START);
+        showNotification(VpnStatus.getLastCleanLogMessage(this),
+                VpnStatus.getLastCleanLogMessage(this), NOTIFICATION_CHANNEL_NEWSTATUS_ID, 0, ConnectionStatus.LEVEL_START, null);
 
         /* start the OpenVPN process itself in a background thread */
         mCommandHandler.post(() -> startOpenVPN(intent, startId));
 
         return START_STICKY;
-    }
-
-    private boolean foregroundNotificationVisible() {
-        NotificationManager mNotificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        StatusBarNotification[] notifications = mNotificationManager.getActiveNotifications();
-        /* Assume for simplicity that all our notifications are foreground */
-        return notifications.length > 0;
     }
 
     @RequiresApi(Build.VERSION_CODES.N_MR1)
