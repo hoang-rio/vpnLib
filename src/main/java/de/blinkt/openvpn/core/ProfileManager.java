@@ -317,6 +317,26 @@ public class ProfileManager {
         for (String vpnentry : vlist) {
             loadVpnEntry(context, vpnentry);
         }
+
+        recoverProfiles(context);
+    }
+
+    private void recoverProfiles(Context context) {
+        /* Recover profiles that were removed from the list by the 0.7.66 update that removed all of them because
+         * of a broken optimisation */
+        for (String file: context.fileList())
+        {
+            if (file.endsWith(".cp") || file.endsWith(".vp"))
+            {
+                String profileName = file.split("\\.")[0];
+
+                if (!profiles.containsKey(profileName)) {
+                    loadVpnEntry(context, profileName);
+                }
+            }
+
+        }
+
     }
 
     private synchronized void loadVpnEntry(Context context, String vpnentry) {
@@ -378,7 +398,6 @@ public class ProfileManager {
         String[] extensions = new String[]{".vp", ".cp", ".cpold"};
         for (String ext: extensions)
             context.deleteFile(vpnentry + ext);
-
 
         if (mLastConnectedVpn == profile)
             mLastConnectedVpn = null;
