@@ -905,6 +905,8 @@ public class VpnProfile implements Serializable, Cloneable {
     }
 
     private X509Certificate[] getKeyStoreCertificates(Context context) throws KeyChainException, InterruptedException {
+        if (mAlias == null)
+            throw new KeyChainException("Key store alias not set");
         mPrivateKey = KeyChain.getPrivateKey(context, mAlias);
 
 
