@@ -528,4 +528,9 @@
     <string name="openvpn_channel_name_error">OpenVPN Error</string>
     <string name="openvpn_channel_description_error">Notifications for OpenVPN errors</string>
     <string name="openvpn_notification_disconnected_error">OpenVPN disconnected due to error</string>
+    <string name="notification_title">OpenVPN - %s</string>
+    <string name="notification_title_notconnect">Not connected</string>
+    <string name="building_configuration">Building configuration…</string>
+    <string name="auth_retry_interact_not_supported">The configuration uses auth-retry interact is not supported.</string>
+
 </resources>

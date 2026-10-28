@@ -66,7 +66,7 @@ public class ProfileManager {
         return instance;
     }
 
-    public static void setConntectedVpnProfileDisconnected(Context c) {
+    public static void setConnectedVpnProfileDisconnected(Context c) {
         SharedPreferences prefs = Preferences.getDefaultSharedPreferences(c);
         Editor prefsedit = prefs.edit();
         prefsedit.putString(LAST_CONNECTED_PROFILE, null);
@@ -263,7 +263,7 @@ public class ProfileManager {
         final HashSet<String> vpn_list = new HashSet<>(profiles.keySet());
         editor.putStringSet("vpnlist", vpn_list);
 
-        // For reasing I do not understand at all
+        // For reasons I do not understand at all
         // Android saves my prefs file only one time
         // if I remove the debug code below :(
         int counter = sharedprefs.getInt("counter", 0);
@@ -318,7 +318,13 @@ public class ProfileManager {
             loadVpnEntry(context, vpnentry);
         }
 
-        recoverProfiles(context);
+        if (!listpref.getBoolean("didrecover", false))
+        {
+            recoverProfiles(context);
+            Editor listprefedit = listpref.edit();
+            listprefedit.putBoolean("didrecover", true);
+            listprefedit.apply();
+        }
     }
 
     private void recoverProfiles(Context context) {
@@ -376,7 +382,7 @@ public class ProfileManager {
             // profile file cannot crash the OpenVPN service; the entry is
             // skipped and will be overwritten on next save.
             if (!vpnentry.equals(TEMPORARY_PROFILE_FILENAME))
-                VpnStatus.logException("Loading VPN List", e);
+                VpnStatus.logException("Loading VPN List:" + vpnentry, e);
         } finally {
             if (vpnfile != null) {
                 try {
