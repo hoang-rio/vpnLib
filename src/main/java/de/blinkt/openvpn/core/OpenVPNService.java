@@ -562,6 +562,24 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        // Satisfy the startForegroundService() contract FIRST, before anything that
+        // can block. VpnStatus.* are process-wide synchronized statics, and their
+        // listener callbacks call showNotification() -> NotificationManager.notify()
+        // + startForeground(), i.e. Binder IPC performed while holding that lock
+        // (see updateByteCount, which runs on the management thread). When the
+        // management thread holds the lock and a notification update stalls, the
+        // main thread blocks in addStateListener() below and the foreground-service
+        // deadline expires -> ForegroundServiceDidNotStartInTimeException.
+        //
+        // Only the action-less intent is started via startForegroundService()
+        // (VPNLaunchHelper) or re-delivered after a START_STICKY restart; the control
+        // actions (DISCONNECT/PAUSE/RESUME/START_SERVICE) arrive through
+        // startService()/bindService() and must not be promoted to foreground.
+        if (intent == null || intent.getAction() == null) {
+            showNotification(getString(R.string.building_configuration), null,
+                    NOTIFICATION_CHANNEL_NEWSTATUS_ID, 0, ConnectionStatus.LEVEL_START, null);
+        }
+
         mIsUserDisconnect = false;
         if (intent != null && intent.getBooleanExtra(ALWAYS_SHOW_NOTIFICATION, false))
             mNotificationAlwaysVisible = true;
