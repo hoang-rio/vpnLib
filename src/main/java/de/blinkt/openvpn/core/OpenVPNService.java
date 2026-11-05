@@ -178,13 +178,6 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
     private HandlerThread mCommandHandlerThread;
     private Handler mCommandHandler;
 
-    // Initialize handler thread lazily on first use (onStartCommand) so that it does not
-    // consume part of the startForegroundService() 5-second deadline before the service
-    // even gets a chance to call startForeground().
-    // The thread is only created when the service actually needs it.
-    // See: https://developer.android.com/guide/components/foreground-services#FGS-deadline
-    // The handler itself is created after the thread is started.
-
     // From: http://stackoverflow.com/questions/3758606/how-to-convert-byte-size-into-human-readable-format-in-java
     public static String humanReadableByteCount(long bytes, boolean speed, Resources res) {
         if (speed)
@@ -342,21 +335,28 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
     
     /**
      * Creates a minimal notification for the startForeground() deadline:
-     * no PendingIntent, no reflection, no channel lookup, no binder work beyond
-     * the startForeground() call itself. Replaced a few lines later by the real
-     * stateful notification in onStartCommand().
+     * no PendingIntent, no reflection, no listeners and no notification extras.
+     * Replaced a few lines later by the real stateful notification in
+     * onStartCommand(), which reuses the same notification id.
+     *
+     * The channel id is mandatory for targetSdk >= O: posting a channel-less
+     * notification through startForeground() makes the system throw
+     * RemoteServiceException$BadNotificationForStartForeground
+     * ("invalid channel for service notification: null").
      */
     private Notification createStubNotification() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            createNotificationChannel(NOTIFICATION_CHANNEL_NEWSTATUS_ID,
-                    NOTIFICATION_CHANNEL_NEWSTATUS_ID + " Name");
-        }
         android.app.Notification.Builder nbuilder = new Notification.Builder(this);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            nbuilder.setChannelId(createNotificationChannel(NOTIFICATION_CHANNEL_NEWSTATUS_ID,
+                    NOTIFICATION_CHANNEL_NEWSTATUS_ID + " Name"));
+        }
         nbuilder.setSmallIcon(R.drawable.ic_notification);
         nbuilder.setContentTitle(getString(R.string.notification_title_notconnect));
         nbuilder.setOngoing(true);
         return nbuilder.build();
-    }@RequiresApi(Build.VERSION_CODES.O)
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
     private String createNotificationChannel(String channelId, String channelName) {
         NotificationChannel chan = new NotificationChannel(channelId,
                 channelName, NotificationManager.IMPORTANCE_NONE);
@@ -600,8 +600,11 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
         // actions (DISCONNECT/PAUSE/RESUME/START_SERVICE) arrive through
         // startService()/bindService() and must not be promoted to foreground.
         if (intent == null || intent.getAction() == null) {
-            showNotification(getString(R.string.building_configuration), null,
-                    NOTIFICATION_CHANNEL_NEWSTATUS_ID, 0, ConnectionStatus.LEVEL_START, null);
+            // Cheapest possible notification that still satisfies the startForegroundService()
+            // contract: no PendingIntent, no reflection, no binder work beyond startForeground()
+            // itself. The real stateful notification is posted further down, after the
+            // VpnStatus listeners are wired up.
+            startForeground(NOTIFICATION_CHANNEL_NEWSTATUS_ID.hashCode(), createStubNotification());
         }
 
         mIsUserDisconnect = false;
@@ -611,27 +614,6 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
         VpnStatus.addStateListener(this);
         if (mDisplaySpeed) {
             VpnStatus.addByteCountListener(this);
-        }
-
-        // Deadline satisfied: publish a stub notification immediately so that
-        // startForeground() runs before any VpnStatus listener or management-thread
-        // work can block the main thread. The real stateful notification replaces it
-        // below after the listeners are in place.
-        int notificationId = NOTIFICATION_CHANNEL_NEWSTATUS_ID.hashCode();
-        startForeground(
-            notificationId,
-            createStubNotification()
-        );
-
-        // Lazy-initialise the command-thread handler here (after startForeground()
-        // satisfies the FGS deadline) so that HandlerThread.start() does not eat
-        // into the 5-second window on cold starts.
-        if (mCommandHandlerThread == null) {
-            mCommandHandlerThread = new HandlerThread("OpenVPNServiceCommandThread");
-            mCommandHandlerThread.start();
-        }
-        if (mCommandHandler == null) {
-            mCommandHandler = new Handler(mCommandHandlerThread.getLooper());
         }
 
         if (intent != null && DISCONNECT_VPN.equals(intent.getAction())) {
