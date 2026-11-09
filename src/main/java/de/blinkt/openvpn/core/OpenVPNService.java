@@ -284,8 +284,14 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
     @Override
     public void onRevoke() {
         VpnStatus.logError(R.string.permission_revoked);
+        /* onRevoke() can be called before the VPN is fully started (e.g. the service
+         * was only created for the startForeground() deadline, or startVpn() bailed out
+         * early), so mManagement may still be null. Capturing it and posting a lambda
+         * that dereferences it would crash the command thread with an NPE. */
         final OpenVPNManagement management = mManagement;
-        mCommandHandler.post(() -> management.stopVPN(false));
+        if (management != null) {
+            mCommandHandler.post(() -> management.stopVPN(false));
+        }
 
         endVpnService();
     }
